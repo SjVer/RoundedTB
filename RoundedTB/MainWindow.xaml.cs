@@ -80,7 +80,7 @@ namespace RoundedTB
 
             // Check if RoundedTB is already running, and if it is, do nothing.
             Process[] matchingProcesses = Process.GetProcessesByName(Process.GetCurrentProcess().ProcessName);
-            
+
             if (matchingProcesses.Length > 1)
             {
                 List<IntPtr> windowList = Interaction.GetTopLevelWindows();
@@ -109,7 +109,7 @@ namespace RoundedTB
 
             if (IsRunningAsUWP())
             {
-                #pragma warning disable CS4014
+#pragma warning disable CS4014
                 StartupInit(true);
                 configPath = Path.Combine(Windows.Storage.ApplicationData.Current.RoamingFolder.Path, "rtb.json");
                 logPath = Path.Combine(Windows.Storage.ApplicationData.Current.RoamingFolder.Path, "rtb.log");
@@ -122,7 +122,12 @@ namespace RoundedTB
             }
             taskbarThread.WorkerSupportsCancellation = true;
             taskbarThread.WorkerReportsProgress = true;
-            taskbarThread.DoWork +=background.DoWork;
+            taskbarThread.DoWork += background.DoWork;
+            taskbarThread.Disposed += (sender, e) =>
+            {
+                foreach (Types.Taskbar taskbar in taskbarDetails)
+                    Taskbar.ResetTaskbar(taskbar, activeSettings);
+            };
 
             // Load settings into memory/UI
             interaction.FileSystem();
@@ -146,7 +151,7 @@ namespace RoundedTB
             }
             if (activeSettings == null)
             {
-                
+
                 if (isWindows11) // Default settings for Windows 11
                 {
                     activeSettings = new Types.Settings()
@@ -662,7 +667,7 @@ namespace RoundedTB
             IntPtr hwndNext = LocalPInvoke.FindWindowExA(taskbarDetails[0].TaskbarHwnd, IntPtr.Zero, "Start", null);
             List<IntPtr> floatingMilkshakesBitsOfTaskbar = new List<IntPtr>();
             floatingMilkshakesBitsOfTaskbar.Add(hwndNext);
-            while (true) 
+            while (true)
             {
                 hwndNext = LocalPInvoke.FindWindowExA(taskbarDetails[0].TaskbarHwnd, hwndNext, null, null);
                 if (floatingMilkshakesBitsOfTaskbar.Contains(hwndNext))
@@ -735,7 +740,7 @@ namespace RoundedTB
             showTrayOnHoverCheckBox.IsChecked = false;
             showTrayCheckBox.IsEnabled = false;
             showTrayCheckBox.IsChecked = false;
-            
+
             if (!isWindows11)
             {
                 splitHelpButton.Visibility = Visibility.Hidden;

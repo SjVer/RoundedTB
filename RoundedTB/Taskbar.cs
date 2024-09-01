@@ -95,17 +95,25 @@ namespace RoundedTB
 
         private static LocalPInvoke.RECT GetActualTaskbarRect(Types.COMStuff comStuff, IntPtr startHwnd)
         {
+            int monitor_offset = 0;
+
+            // The left of secondary monitors is relative to the primary monitor's left
+            IntPtr monitor = LocalPInvoke.MonitorFromWindow(startHwnd, 2);
+            LocalPInvoke.MONITORINFO monitorInfo = new LocalPInvoke.MONITORINFO() { cbSize = LocalPInvoke.SIZEOF_MONITORINFO };
+            if (LocalPInvoke.GetMonitorInfo(monitor, ref monitorInfo))
+                monitor_offset = monitorInfo.MonitorRect.Left;
+
             // Get the rect for the start button
-            LocalPInvoke.GetWindowRect(startHwnd, out LocalPInvoke.RECT rectStart);
+            LocalPInvoke.GetWindowRect(startHwnd, out LocalPInvoke.RECT startRect);
 
             LocalPInvoke.RECT taskListButtonsRect = GetTaskListButtonsRect(comStuff);
 
             // Include everything between- and including the start button and the task list
             return new LocalPInvoke.RECT
             {
-                Left = rectStart.Left,
+                Left = startRect.Left - monitor_offset,
                 Top = taskListButtonsRect.Top,
-                Right = taskListButtonsRect.Right,
+                Right = taskListButtonsRect.Right - monitor_offset,
                 Bottom = taskListButtonsRect.Bottom
             };
         }
@@ -214,7 +222,7 @@ namespace RoundedTB
         {
             InitializeCOMStuffIfNeeded(ref outdatedTaskbar.COMStuff, outdatedTaskbar.TaskbarHwnd);
             LocalPInvoke.RECT taskbarRectCheck = GetActualTaskbarRect(outdatedTaskbar.COMStuff, outdatedTaskbar.StartHwnd);
-            
+
             //LocalPInvoke.GetWindowRect(taskbarHwnd, out LocalPInvoke.RECT taskbarRectCheck);
             LocalPInvoke.GetWindowRect(outdatedTaskbar.TrayHwnd, out LocalPInvoke.RECT trayRectCheck);
             LocalPInvoke.GetWindowRect(outdatedTaskbar.AppListHwnd, out LocalPInvoke.RECT appListRectCheck);
@@ -226,7 +234,7 @@ namespace RoundedTB
                 AppListHwnd = outdatedTaskbar.AppListHwnd,
                 TaskbarRect = taskbarRectCheck,
                 TrayRect = trayRectCheck,
-                AppListRect = appListRectCheck
+                AppListRect = appListRectCheck,
             };
         }
 
@@ -307,58 +315,22 @@ namespace RoundedTB
                 settings.MarginRight = 0;
                 settings.MarginBottom = 0;
 
-                int centredDistanceFromEdge = taskbar.TaskbarRect.Right - taskbar.AppListRect.Right - Convert.ToInt32(2 * taskbar.ScaleFactor);
+                // NOTE: It doesn't seem to agree on what is the top/bottom?
+                // Maybe it considers the top of the coordinate system to be the top of the taskbar?
 
-                // If on Windows 10, add an extra 20 logical pixels for the grabhandle
-                if (!settings.IsWindows11)
-                {
-                    centredDistanceFromEdge -= Convert.ToInt32(20 * taskbar.ScaleFactor);
-                }
+                int left = taskbar.TaskbarRect.Left + Convert.ToInt32(settings.MarginLeft * taskbar.ScaleFactor);
+                int right = taskbar.TaskbarRect.Right - Convert.ToInt32(settings.MarginRight * taskbar.ScaleFactor);
+                int top = Convert.ToInt32(settings.MarginTop * taskbar.ScaleFactor);
+                int height = taskbar.TaskbarRect.Bottom - taskbar.TaskbarRect.Top;
+                int bottom = top + height - Convert.ToInt32(settings.MarginBottom * taskbar.ScaleFactor);
 
-                IntPtr mainRegion;
+                // Idk why
+                if (!settings.IsCentred && settings.IsWindows11)
+                    left += Convert.ToInt32(12 * taskbar.ScaleFactor);
+
+                // Create an effective region to be applied to the taskbar for the applist
                 int cornerRadius = Convert.ToInt32(settings.CornerRadius * taskbar.ScaleFactor);
-
-                //if (settings.IsCentred)
-                //{
-
-                    // NOTE: It doesn't seem to agree on what is the top/bottom?
-                    // Maybe it considers the top of the coordinate system to be the top of the taskbar?
-
-                    int left = taskbar.TaskbarRect.Left + Convert.ToInt32(settings.MarginLeft * taskbar.ScaleFactor);
-                    int right = taskbar.TaskbarRect.Right - Convert.ToInt32(settings.MarginRight * taskbar.ScaleFactor);
-
-                    int height = taskbar.TaskbarRect.Bottom - taskbar.TaskbarRect.Top;
-
-                    int top = Convert.ToInt32(settings.MarginTop * taskbar.ScaleFactor);
-                    int bottom = top + height - Convert.ToInt32(settings.MarginBottom * taskbar.ScaleFactor);
-
-                    // Create an effective region to be applied to the taskbar for the applist
-                    mainRegion = LocalPInvoke.CreateRoundRectRgn(left, top, right, bottom, cornerRadius, cornerRadius);
-
-                //}
-                //else
-                //{
-                //    // Create a region for if the taskbar is left-aligned, right-to-right distance (centredDistanceFromEdge) off from the right-hand side, as well as the margin
-
-                //    // Create an effective region to be applied to the taskbar for the applist
-                //    Types.EffectiveRegion taskbarEffectiveRegion = new Types.EffectiveRegion
-                //    {
-                //        CornerRadius = Convert.ToInt32(settings.CornerRadius * taskbar.ScaleFactor),
-                //        Top = Convert.ToInt32(settings.MarginTop * taskbar.ScaleFactor),
-                //        Left = Convert.ToInt32(settings.MarginLeft * taskbar.ScaleFactor),
-                //        Width = Convert.ToInt32(taskbar.TaskbarRect.Right - taskbar.TaskbarRect.Left - (settings.MarginRight * taskbar.ScaleFactor)) + 1,
-                //        Height = Convert.ToInt32(taskbar.TaskbarRect.Bottom - taskbar.TaskbarRect.Top - (settings.MarginBottom * taskbar.ScaleFactor)) + 1
-                //    };
-
-                //    mainRegion = LocalPInvoke.CreateRoundRectRgn(
-                //        taskbarEffectiveRegion.Left,
-                //        taskbarEffectiveRegion.Top,
-                //        taskbarEffectiveRegion.Width - centredDistanceFromEdge,
-                //        taskbarEffectiveRegion.Height,
-                //        taskbarEffectiveRegion.CornerRadius,
-                //        taskbarEffectiveRegion.CornerRadius
-                //    );
-                //}
+                IntPtr mainRegion = LocalPInvoke.CreateRoundRectRgn(left, top, right, bottom, cornerRadius, cornerRadius);
 
                 // If the user has it enabled and the tray handle isn't null, create a region for the system tray and merge it with the taskbar region
                 if (settings.ShowTray && taskbar.TrayHwnd != IntPtr.Zero)
@@ -550,7 +522,6 @@ namespace RoundedTB
                     }
                     else
                     {
-
                         Types.COMStuff currentComStuff = new Types.COMStuff();
                         InitializeCOMStuffIfNeeded(ref currentComStuff, hwndCurrent);
 
@@ -591,8 +562,6 @@ namespace RoundedTB
 
         public static bool TaskbarShouldBeFilled(IntPtr taskbarHwnd, Types.Settings settings)
         {
-            bool retVal = false;
-
             if (settings.FillOnMaximise)
             {
                 // Attempt to check for if alt+tab/task switcher is open (Windows 11 only)
@@ -622,16 +591,14 @@ namespace RoundedTB
                                 LocalPInvoke.WINDOWPLACEMENT lpwndpl = new LocalPInvoke.WINDOWPLACEMENT();
                                 LocalPInvoke.GetWindowPlacement(windowHwnd, ref lpwndpl);
                                 if (lpwndpl.ShowCmd == LocalPInvoke.ShowWindowCommands.ShowMaximized)
-                                {
-                                    retVal = true;
-                                }
+                                    return true;
                             }
                         }
                     }
                 }
             }
 
-            return retVal;
+            return false;
         }
     }
 }

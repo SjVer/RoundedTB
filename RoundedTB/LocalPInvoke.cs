@@ -31,6 +31,21 @@ namespace RoundedTB
         public const int UIA_ClassNamePropertyId = 30012;
 
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MONITORINFO
+        {
+            public int cbSize;
+            public RECT MonitorRect;
+            public RECT WorkRect;
+            public int Flags;
+        }
+
+        public const int SIZEOF_MONITORINFO = 40;
+
+        [DllImport("user32.dll")]
+        public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, SetWindowPosFlags uFlags);
 
