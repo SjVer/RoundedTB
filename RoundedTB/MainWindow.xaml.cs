@@ -443,6 +443,7 @@ namespace RoundedTB
             {
                 try
                 {
+                    taskbarThread.WorkerSupportsCancellation = true;
                     taskbarThread.CancelAsync();
                 }
                 catch (Exception aaaa)

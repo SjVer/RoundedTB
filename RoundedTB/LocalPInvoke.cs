@@ -7,6 +7,30 @@ namespace RoundedTB
 {
     public class LocalPInvoke
     {
+        public const uint COINIT_APARTMENTTHREADED = 0x2;
+
+        [DllImport("ole32.dll")]
+        public static extern int CoInitializeEx(IntPtr pvReserved, uint dwCoInit);
+
+        [DllImport("ole32.dll")]
+        public static extern void CoUninitialize();
+
+        public const uint CLSCTX_INPROC_SERVER = 0x1;
+        public static Guid IID_IUIAutomation = new Guid("{30CBE57D-D9D0-452A-AB13-7AC5AC4825EE}");
+        public static Guid CLSID_CUIAutomation = new Guid("{FF48DBA4-60EF-4201-AA87-54103EEF594E}");
+
+        [DllImport("ole32.dll")]
+        public static extern int CoCreateInstance(
+            [In] ref Guid rclsid,
+            [In, MarshalAs(UnmanagedType.IUnknown)] object pUnkOuter,
+            [In] uint dwClsContext,
+            [In] ref Guid riid,
+            [Out, MarshalAs(UnmanagedType.Interface)] out object ppv);
+
+        public const int UIA_NativeWindowHandlePropertyId = 30020;
+        public const int UIA_ClassNamePropertyId = 30012;
+
+
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, SetWindowPosFlags uFlags);
 
@@ -100,7 +124,7 @@ namespace RoundedTB
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool GetWindowPlacement(IntPtr hWnd, ref WINDOWPLACEMENT lpwndpl);
-        
+
         [DllImport("user32.dll", SetLastError = true, EntryPoint = "GetClassNameW", CharSet = CharSet.Unicode)]
         public static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
 
@@ -466,7 +490,7 @@ namespace RoundedTB
             ShowWindow = 0x0040,
         }
 
-        
+
 
 
 

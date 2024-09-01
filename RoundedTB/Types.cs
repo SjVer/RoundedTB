@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Interop.UIAutomationClient;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +9,14 @@ namespace RoundedTB
 {
     public class Types
     {
+        public class COMStuff
+        {
+            public bool Initialized { get; set; } = false;
+            public IUIAutomation UIAutomation { get; set; }
+            public IUIAutomationElement UITaskbarElement { get; set; }
+            public IUIAutomationCondition UITaskListCondition { get; set; }
+        };
+
         public class Taskbar
         {
             public IntPtr TaskbarHwnd { get; set; } // Handle to the taskbar
@@ -23,7 +32,9 @@ namespace RoundedTB
             public bool TrayHidden { get; set; } // Specifies if the tray is currently hidden by RTB on this taskbar
             public int AppListWidth { get; set; } // Specifies the width of the app list
             public TaskbarEffect TaskbarEffectWindow { get; set; }
-            
+
+            public IntPtr StartHwnd { get; set; } // Handle to the start button
+            public COMStuff COMStuff = new COMStuff();
         }
 
         public class Settings
